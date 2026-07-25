@@ -39,8 +39,9 @@ re-run `./start.sh`. It then builds and starts Postgres (seeded from
 
 ```bash
 curl localhost:3000/products
-./success.sh   # checkout a normal SKU — 201, happy-path spans/metrics/logs
-./error.sh     # checkout the declined-card SKU — 402, chargeCard span ends ERROR
+./checkout-mug.sh       # checkout mug-01 — 201, happy-path spans/metrics/logs
+./checkout-shirt.sh     # checkout shirt-01 — 201, happy-path spans/metrics/logs
+./checkout-bad-card.sh  # checkout bad-card — 402, chargeCard span ends ERROR
 ```
 
 Traces, metrics, and logs export every 5s (metrics) or in near-real-time
