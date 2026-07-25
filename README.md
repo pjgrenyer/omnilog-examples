@@ -30,25 +30,22 @@ alongside the happy path.
 ## Running it
 
 ```bash
-cp .env.example .env
+./start.sh
 ```
 
-Fill in `.env` with a real ingest endpoint and API key — see the root
-README's "Sending logs" section for how to get both
-(`terraform -chdir=infra output -raw api_gateway_id` for the endpoint, a key
-from `infra/seed-tenant.sh` for the header). Then:
-
-```bash
-docker compose up --build
-```
-
-This starts Postgres (seeded from `db/init.sql` on first boot) and the app on
-`localhost:3000`.
+Each run rebuilds `.env` from `scripts/demo-feed.env`'s tenant credentials
+(translating `OMNILOG_URL`/`OMNILOG_API_KEY` into the
+`OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_EXPORTER_OTLP_HEADERS` docker-compose
+reads), then builds and starts Postgres (seeded from `db/init.sql` on first
+boot) and the app on `localhost:3000`. If you don't have
+`scripts/demo-feed.env` set up, see the root README's "Sending logs" section
+for how to get an endpoint and API key, and write `.env` yourself from
+`.env.example`.
 
 ```bash
 curl localhost:3000/products
-curl -X POST localhost:3000/checkout -H 'content-type: application/json' -d '{"sku":"mug-01","quantity":2}'
-curl -X POST localhost:3000/checkout -H 'content-type: application/json' -d '{"sku":"bad-card","quantity":1}'
+./success.sh   # checkout a normal SKU — 201, happy-path spans/metrics/logs
+./error.sh     # checkout the declined-card SKU — 402, chargeCard span ends ERROR
 ```
 
 Traces, metrics, and logs export every 5s (metrics) or in near-real-time
@@ -58,7 +55,10 @@ filtered by `service:shop-demo`.
 
 ## Local-only debugging
 
-To point at an OTel Collector instead of a deployed Omnilog stack, swap
-`OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_EXPORTER_OTLP_HEADERS` in `.env` for the
-Collector's `otlphttp` receiver address — nothing else in the app changes,
-since the endpoint, headers, and service name are all env-configured.
+`start.sh` overwrites `.env` on every run, so to point at an OTel Collector
+instead of a deployed Omnilog stack, don't rely on `.env` surviving a restart —
+either edit `scripts/demo-feed.env`'s `OMNILOG_URL`, or skip `start.sh` and run
+`docker compose up --build` directly against a hand-written `.env` with
+`OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_EXPORTER_OTLP_HEADERS` pointed at the
+Collector's `otlphttp` receiver. Nothing else in the app changes, since the
+endpoint, headers, and service name are all env-configured.
