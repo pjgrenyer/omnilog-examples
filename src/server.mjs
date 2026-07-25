@@ -2,12 +2,22 @@ import express from "express";
 import { trace } from "@opentelemetry/api";
 import { pool } from "./db.mjs";
 import { ordersCreated, checkoutDuration } from "./metrics.mjs";
+import { logInfo, logError } from "./logger.mjs";
 
 const tracer = trace.getTracer("shop-demo");
 
 export function createApp() {
   const app = express();
   app.use(express.json());
+
+  app.use((req, res, next) => {
+    res.on("finish", () => {
+      const attrs = { "http.method": req.method, "http.route": req.path, "http.status_code": res.statusCode };
+      if (res.statusCode >= 400) logError(`${req.method} ${req.path} failed`, attrs);
+      else logInfo(`${req.method} ${req.path} completed`, attrs);
+    });
+    next();
+  });
 
   app.get("/products", async (_req, res) => {
     const { rows } = await pool.query("SELECT sku, name, price_cents FROM products");
