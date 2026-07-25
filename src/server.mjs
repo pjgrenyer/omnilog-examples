@@ -1,6 +1,7 @@
 import express from "express";
 import { trace } from "@opentelemetry/api";
 import { pool } from "./db.mjs";
+import { ordersCreated, checkoutDuration } from "./metrics.mjs";
 
 const tracer = trace.getTracer("shop-demo");
 
@@ -28,6 +29,7 @@ export function createApp() {
 
   app.post("/checkout", async (req, res) => {
     const { sku, quantity } = req.body;
+    const startedAt = Date.now();
 
     try {
       const product = await tracer.startActiveSpan("validateCart", async (span) => {
@@ -63,8 +65,11 @@ export function createApp() {
         return rows[0].id;
       });
 
+      ordersCreated.add(1, { sku });
+      checkoutDuration.record(Date.now() - startedAt, { sku, outcome: "success" });
       res.status(201).json({ orderId, total_cents });
     } catch (err) {
+      checkoutDuration.record(Date.now() - startedAt, { sku, outcome: "error" });
       res.status(err.statusCode ?? 500).json({ error: err.message });
     }
   });

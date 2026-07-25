@@ -3,6 +3,8 @@ import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentation
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
+import { MeterProvider, PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 
 const sdk = new NodeSDK({
   resource: resourceFromAttributes({
@@ -14,4 +16,18 @@ const sdk = new NodeSDK({
 
 sdk.start();
 
-process.on("SIGTERM", () => sdk.shutdown().finally(() => process.exit(0)));
+export const meterProvider = new MeterProvider({
+  resource: resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME ?? "shop-demo",
+  }),
+  readers: [
+    new PeriodicExportingMetricReader({
+      exporter: new OTLPMetricExporter(),
+      exportIntervalMillis: 5000, // short interval so a demo run doesn't need to wait long to see data
+    }),
+  ],
+});
+
+process.on("SIGTERM", () => {
+  Promise.all([sdk.shutdown(), meterProvider.shutdown()]).finally(() => process.exit(0));
+});
