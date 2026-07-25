@@ -1,12 +1,12 @@
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 import { MeterProvider, PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
-import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 import { LoggerProvider, BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
-import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
+import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-proto";
 
 const sdk = new NodeSDK({
   resource: resourceFromAttributes({
@@ -34,7 +34,7 @@ export const loggerProvider = new LoggerProvider({
   resource: resourceFromAttributes({
     [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME ?? "shop-demo",
   }),
-  processors: [new BatchLogRecordProcessor(new OTLPLogExporter())],
+  processors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })],
 });
 
 process.on("SIGTERM", () => {
