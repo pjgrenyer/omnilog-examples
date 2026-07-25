@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
 #
-# Build .env from scripts/demo-feed.env's credentials and start the stack.
-# demo-feed.env uses OMNILOG_URL/OMNILOG_API_KEY; docker-compose.yml reads
-# OTEL_EXPORTER_OTLP_ENDPOINT/OTEL_EXPORTER_OTLP_HEADERS, so translate rather
-# than copy directly.
+# First run: create .env from .env.example and stop so you can fill in your
+# own OTLP endpoint/API key. Once .env exists, build and start the stack.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-source ../../scripts/demo-feed.env
-cat > .env <<EOF
-OTEL_EXPORTER_OTLP_ENDPOINT=$OMNILOG_URL
-OTEL_EXPORTER_OTLP_HEADERS=x-api-key=$OMNILOG_API_KEY
-EOF
+if [ ! -f .env ]; then
+  cp .env.example .env
+  echo "Created .env from .env.example — fill in your OTLP endpoint and API key, then re-run ./start.sh"
+  exit 1
+fi
 
 docker compose up --build

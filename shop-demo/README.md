@@ -9,8 +9,7 @@ trace.
 
 It's a pure OTLP client. No Omnilog ingestion code was changed to build this —
 it POSTs to the same `/v1/traces`, `/v1/metrics`, `/v1/logs` endpoints any
-OTel SDK or Collector uses, documented in the root README's "Sending logs"
-section.
+OTel SDK or Collector uses.
 
 ## Endpoints
 
@@ -33,14 +32,10 @@ alongside the happy path.
 ./start.sh
 ```
 
-Each run rebuilds `.env` from `scripts/demo-feed.env`'s tenant credentials
-(translating `OMNILOG_URL`/`OMNILOG_API_KEY` into the
-`OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_EXPORTER_OTLP_HEADERS` docker-compose
-reads), then builds and starts Postgres (seeded from `db/init.sql` on first
-boot) and the app on `localhost:3000`. If you don't have
-`scripts/demo-feed.env` set up, see the root README's "Sending logs" section
-for how to get an endpoint and API key, and write `.env` yourself from
-`.env.example`.
+On first run, this creates `.env` from `.env.example` and stops — fill in
+the OTLP endpoint and API key Omnilog issued you for your tenant, then
+re-run `./start.sh`. It then builds and starts Postgres (seeded from
+`db/init.sql` on first boot) and the app on `localhost:3000`.
 
 ```bash
 curl localhost:3000/products
@@ -55,10 +50,8 @@ filtered by `service:shop-demo`.
 
 ## Local-only debugging
 
-`start.sh` overwrites `.env` on every run, so to point at an OTel Collector
-instead of a deployed Omnilog stack, don't rely on `.env` surviving a restart —
-either edit `scripts/demo-feed.env`'s `OMNILOG_URL`, or skip `start.sh` and run
-`docker compose up --build` directly against a hand-written `.env` with
-`OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_EXPORTER_OTLP_HEADERS` pointed at the
-Collector's `otlphttp` receiver. Nothing else in the app changes, since the
-endpoint, headers, and service name are all env-configured.
+To point at an OTel Collector instead of a deployed Omnilog stack, edit
+`.env`'s `OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_EXPORTER_OTLP_HEADERS` to the
+Collector's `otlphttp` receiver, then run `docker compose up --build`
+directly. Nothing else in the app changes, since the endpoint, headers, and
+service name are all env-configured.
