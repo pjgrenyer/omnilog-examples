@@ -60,6 +60,7 @@ export function createApp() {
         await new Promise((r) => setTimeout(r, 150 + Math.random() * 100));
         if (product.declined) {
           span.setStatus({ code: 2, message: "card declined" }); // 2 = ERROR
+          logError("card declined", { sku, quantity, "cart.total_cents": total_cents });
           span.end();
           throw Object.assign(new Error("card declined"), { statusCode: 402 });
         }
@@ -71,6 +72,7 @@ export function createApp() {
           "INSERT INTO orders (sku, quantity, total_cents) VALUES ($1, $2, $3) RETURNING id",
           [sku, quantity, total_cents],
         );
+        logInfo("order created", { orderId: rows[0].id, sku, quantity, total_cents });
         span.end();
         return rows[0].id;
       });
