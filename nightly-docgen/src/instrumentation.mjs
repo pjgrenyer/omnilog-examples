@@ -40,7 +40,15 @@ export const meterProvider = new MeterProvider({
 
 export const loggerProvider = new LoggerProvider({
   resource,
-  processors: [new BatchLogRecordProcessor(new OTLPLogExporter())],
+  // Unlike sdk-trace-base's BatchSpanProcessor (a shim accepting a bare
+  // exporter positionally, see below), BatchLogRecordProcessor takes only the
+  // base { exporter, ...config } object form — passing the exporter
+  // positionally leaves `this._exporter` undefined inside the processor.
+  // BatchLogRecordProcessorBase._flushAll() swallows that failure via
+  // globalErrorHandler rather than rejecting, so forceFlush() resolves
+  // successfully regardless — logs were silently never exported and nothing
+  // here would have surfaced it without diag logging turned on to see it.
+  processors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })],
 });
 
 export const tracer = trace.getTracer("nightly-docgen");
