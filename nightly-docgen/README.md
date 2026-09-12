@@ -22,6 +22,13 @@ deliberately stateless: each in-window tick computes
 env vars alone, no DynamoDB job-state table, no cross-invocation
 coordination.
 
+At the beginning of each in-window tick, the Lambda lists the `documents/`
+prefix and deletes objects belonging to earlier run IDs. The current run's
+prefix is preserved, so the first tick clears the previous night's documents
+and later ticks can safely repeat the cleanup without deleting documents
+already generated that night. This also makes cleanup retry automatically if
+an invocation is interrupted.
+
 Each document gets its own trace, spans started manually (no HTTP
 auto-instrumentation to lean on):
 
@@ -71,7 +78,8 @@ terraform plan   # review before applying — creates real, billable AWS resourc
 terraform apply
 ```
 
-This creates an S3 bucket (documents, 7-day expiry), an IAM role, the
+This creates an S3 bucket (documents from the current run, with a 7-day
+expiry as a fallback), an IAM role, the
 Lambda (from a bootstrap placeholder — see below), and the EventBridge
 schedule. Note the two outputs (`function_name`, `documents_bucket`) —
 you'll want `function_name` for on-demand testing below.
@@ -184,6 +192,7 @@ source secrets.env
 terraform destroy
 ```
 
-The S3 bucket has a 7-day expiry on its objects regardless, but the bucket,
+Previous runs' documents are deleted when a new run begins, and the S3 bucket
+also has a 7-day expiry on its objects as a fallback. The bucket,
 Lambda, and schedule keep running (and the schedule keeps invoking, all
 day, every day, whether or not it's in-window) until destroyed.
