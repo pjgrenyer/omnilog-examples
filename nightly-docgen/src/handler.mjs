@@ -4,7 +4,7 @@ import { forceFlushAll, tracer } from "./instrumentation.mjs";
 import { logError, logInfo } from "./logger.mjs";
 import { documentsGenerated, documentsTarget } from "./metrics.mjs";
 import { docsPerTick, isWithinWindow, runIdFor, windowMinutes } from "./schedule.mjs";
-import { putDocument } from "./s3.mjs";
+import { deletePreviousDocuments, putDocument } from "./s3.mjs";
 
 function env(name, fallback) {
   const raw = process.env[name];
@@ -109,6 +109,11 @@ export async function handler(event = {}, context = {}) {
   // inside generateDocument) must not also lose whatever telemetry the
   // batch processors are already holding from this invocation.
   try {
+    const deleted = await deletePreviousDocuments(cfg.bucket, runId);
+    if (deleted > 0) {
+      logInfo("deleted documents from previous runs", { run_id: runId, deleted });
+    }
+
     // No run_id tag here either — same cardinality reasoning as
     // documents.generated; the dashboard's time-range picker selects the night.
     documentsTarget.record(cfg.totalDocs);

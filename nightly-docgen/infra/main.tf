@@ -62,12 +62,16 @@ resource "aws_iam_role_policy" "docgen" {
     Version = "2012-10-17"
     Statement = [
       {
-        # Write-only: this Lambda creates documents, never reads or lists
-        # them back — the dashboard and Omnilog get the record via OTLP, not
-        # via S3.
+        # The Lambda lists and deletes documents from previous nightly runs
+        # before writing the current run's documents.
         Effect   = "Allow"
-        Action   = ["s3:PutObject"]
+        Action   = ["s3:PutObject", "s3:DeleteObject"]
         Resource = ["${aws_s3_bucket.documents.arn}/*"]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = [aws_s3_bucket.documents.arn]
       },
       {
         Effect   = "Allow"
